@@ -157,7 +157,7 @@ Subscription Confirmation" — sem isso o SNS não entrega nada.
 1. Uma vez só, cria a role OIDC:
    ```bash
    aws cloudformation deploy --template-file infra/github-oidc.yaml --stack-name feedback-github-oidc \
-     --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOrg=SEU_USUARIO GitHubRepo=svc-feedback-platform
+     --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOrg=alisonguima GitHubRepo=svc-feedback-platform
    aws cloudformation describe-stacks --stack-name feedback-github-oidc --query "Stacks[0].Outputs"
    ```
 2. No GitHub: Settings -> Environments -> novo ambiente `producao`.
