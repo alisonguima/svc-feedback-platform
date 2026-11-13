@@ -28,9 +28,53 @@ projetos anteriores da fase.
 
 ## Modelo de cloud
 
-Nuvem pública (AWS), FaaS + serviços gerenciados: não tem servidor pra
-administrar, escala sozinho e o custo é por uso. No volume de uma demo, tudo
-fica dentro do free tier.
+**Implantação: nuvem pública (AWS).** Não tem hardware nem data center pra
+manter, os serviços estão disponíveis na hora e o custo acompanha o uso. Para
+uma plataforma de feedback, com tráfego baixo e irregular (picos no fim das
+aulas, quase nada no resto do tempo), pagar por servidor ligado 24h não faz
+sentido.
+
+**Serviço: FaaS + serviços gerenciados (PaaS).** As regras de negócio rodam em
+funções (AWS Lambda) e todo o resto é gerenciado pela AWS: API, banco,
+mensageria, agendamento e monitoramento.
+
+| Modelo | O que eu administraria | Por que não |
+| ------ | ---------------------- | ----------- |
+| IaaS (EC2/VM) | SO, patches, JVM, escala, alta disponibilidade | servidor ligado o tempo todo e trabalho de operação sem relação com o problema |
+| Containers (ECS/EKS) | imagem, cluster, escala | mais peças pra um sistema de 3 operações simples |
+| **FaaS + gerenciados** | só o código e a configuração (IaC) | **escolhido** |
+
+**Por que serverless se encaixa aqui:**
+- Custo por uso: sem requisição, sem custo. No volume de uma demo, fica dentro do free tier.
+- Escala automática: cada requisição pode abrir uma instância da função, sem configurar nada.
+- Eventos nativos: o requisito é todo orientado a eventos (chegou avaliação,
+  avaliação crítica, toda segunda) e cada evento vira o gatilho de uma função.
+- Operação mínima: patch, disponibilidade e logs ficam com a AWS.
+
+**Trade-offs aceitos:**
+- Cold start da JVM (1 a 3 s na primeira chamada). Mitigado com 512 MB,
+  `TieredStopAtLevel=1`, cliente HTTP leve e sem Spring.
+- Dependência do fornecedor (lock-in). Mitigado pela arquitetura hexagonal: AWS
+  só aparece nos adapters e no `config`; domínio e use cases são Java puro.
+- Limites da plataforma (tempo máximo de execução, tamanho do pacote), que não
+  afetam este sistema.
+
+### Componentes da solução
+
+| Componente | Papel na solução |
+| ---------- | ---------------- |
+| API Gateway (REST) | Porta de entrada do `POST /avaliacao`: HTTPS, chave de API, throttling e cota |
+| Lambda `receber-avaliacao` | Valida, classifica a urgência e grava a avaliação |
+| DynamoDB `Avaliacoes` | Guarda as avaliações; índice `dia-index` para o relatório consultar por dia |
+| DynamoDB Streams | Gera um evento a cada avaliação gravada |
+| Lambda `notificar-urgencia` | Recebe só as avaliações críticas do stream e avisa o admin |
+| EventBridge Scheduler | Dispara o relatório toda segunda às 08:00 (horário de Brasília) |
+| Lambda `gerar-relatorio` | Consolida os últimos 7 dias (média, por dia, por urgência) e envia |
+| SNS `AdminTopic` | Entrega os e-mails ao admin: urgência, relatório e alarmes |
+| CloudWatch | Logs, dashboard e alarmes de erro/5xx |
+| IAM | Uma role por função (menor privilégio) e usuário dedicado ao deploy |
+| CloudFormation / SAM | Infraestrutura como código (`template.yaml`) |
+| GitHub Actions | Testes, lint e deploy automático a cada push na `main` |
 
 ## Arquitetura
 
@@ -75,6 +119,10 @@ CloudWatch (alarmes de erro / 5xx) ------------------------------------------> S
 
 ### 1. `receber-avaliacao` — `ReceiveFeedbackHandler`
 - Gatilho: API Gateway `POST /avaliacao` (header `x-api-key`).
+- Rota sem acento de propósito: o enunciado usa `/avaliação`, mas caractere
+  acentuado em URL precisa ser codificado (`/avalia%C3%A7%C3%A3o`), o que
+  complica cliente, teste e documentação. O contrato do corpo é o mesmo do
+  enunciado.
 - Entrada: `{"descricao": "Aula confusa", "nota": 2}` — descrição não vazia até
   500 caracteres (aceita `descrição` também), nota inteira de 0 a 10.
 - Saída: `201 {"id", "urgencia", "dataEnvio"}`; erro em formato Problem Details
@@ -185,8 +233,9 @@ Enviar avaliação (PowerShell; o script busca URL e API key sozinho):
 Disparar o relatório sem esperar segunda:
 ```bash
 aws lambda invoke --function-name feedback-plataforma-gerar-relatorio \
-  --payload '{"dias": 7}' --cli-binary-format raw-in-base64-out saida.json
+  --payload fileb://events/relatorio.json saida.json
 ```
+(Funciona igual no PowerShell e no bash; o `{"dias": 7}` está em `events/relatorio.json`.)
 
 Eventos de exemplo pro `sam local invoke` estão em `events/`.
 
