@@ -1,211 +1,191 @@
 # svc-feedback-platform
 
-Plataforma **serverless** de feedback de aulas (Tech Challenge - Fase 4).
-Estudantes avaliam as aulas por uma API; avaliações **críticas** geram e-mail
-imediato para os administradores e, toda semana, um **relatório consolidado**
-(com média das notas) é enviado automaticamente. Roda 100% na **AWS**
-(Lambda + API Gateway + DynamoDB + SNS + EventBridge Scheduler + CloudWatch) e
-segue **Arquitetura Hexagonal (Ports & Adapters)**, no mesmo padrão dos serviços
-das fases anteriores.
+Tech Challenge - Fase 4 (Pós Tech). Plataforma serverless de feedback de aulas:
+alunos avaliam as aulas por uma API, avaliações críticas disparam e-mail na hora
+pro admin, e toda segunda um relatório da semana (com média das notas) sai
+sozinho. Tudo na AWS, serverless (Lambda + API Gateway + DynamoDB + SNS +
+EventBridge Scheduler + CloudWatch), seguindo arquitetura hexagonal igual os
+projetos anteriores da fase.
 
 > **Vídeo de demonstração:** _(link)_
 > **Autor:** Alison Guimarães (RM371602)
 
-## Requisitos da Fase 4 → onde cada um é atendido
-
-| Requisito | Onde |
-| --------- | ---- |
-| Ambiente de nuvem com segurança e governança de acesso | IAM com uma role por função (menor privilégio), API com chave + throttling, HTTPS, criptografia em repouso, root com MFA, deploy via OIDC — ver [Segurança](#segurança-e-governança-de-acesso) |
-| Componentes de suporte (bancos etc.) | DynamoDB `Avaliacoes` + índice `dia-index`, SNS, EventBridge Scheduler (`template.yaml`) |
-| Deploy automatizado | AWS SAM + GitHub Actions (`.github/workflows/deploy.yml`) |
-| Aplicação monitorada | CloudWatch: logs, dashboard e alarmes — ver [Monitoramento](#monitoramento-e-alertas) |
-| Notificações automáticas para problemas críticos | Avaliação crítica → `NotifyUrgencyHandler`; falhas do sistema → alarmes do CloudWatch |
-| Relatório semanal com média | `WeeklyReportHandler`, toda segunda às 08:00 (Brasília) |
-| Mínimo de 2 funções, responsabilidade única | 3 funções, cada uma com um handler, um use case e uma role IAM própria |
-| `POST /avaliacao` com `descricao` e `nota` (0 a 10) | `ReceiveFeedbackHandler` |
-| E-mail de urgência: descrição, urgência, data de envio | `AdminMessageFormatter#urgency` |
-| Relatório: descrição, urgência, data, qtd. por dia, qtd. por urgência | `AdminMessageFormatter#weeklyReport` |
-
-## Stack técnica
+## Stack
 
 | Categoria       | Tecnologia                                              |
 | --------------- | ------------------------------------------------------- |
 | Linguagem       | Java 21                                                 |
 | Runtime         | AWS Lambda (`java21`, arm64)                            |
-| API             | Amazon API Gateway (REST) com chave de API e usage plan |
-| Banco de dados  | Amazon DynamoDB (on-demand) + DynamoDB Streams          |
-| Mensageria      | Amazon SNS (e-mail para o administrador)                |
-| Agendamento     | Amazon EventBridge Scheduler                            |
-| Observabilidade | Amazon CloudWatch (logs JSON, dashboard, alarmes)       |
-| AWS SDK         | AWS SDK for Java v2 (DynamoDB Enhanced Client, SNS, url-connection-client) |
-| Boilerplate     | Lombok                                                  |
+| API             | API Gateway (REST), com chave de API e usage plan       |
+| Banco           | DynamoDB (on-demand) + Streams                          |
+| Mensageria      | SNS (e-mail pro admin)                                  |
+| Agendamento     | EventBridge Scheduler                                   |
+| Observabilidade | CloudWatch (logs JSON, dashboard, alarmes)              |
+| AWS SDK         | AWS SDK for Java v2                                     |
 | IaC             | AWS SAM (`template.yaml`)                               |
 | CI/CD           | GitHub Actions + OIDC                                   |
 | Testes          | JUnit 5, Mockito, AssertJ, JaCoCo (gate 100% linha)     |
 
 ## Modelo de cloud
 
-**Nuvem pública (AWS)**, no modelo **FaaS + serviços gerenciados (PaaS)**: não há
-servidor para administrar, a escala é automática e o custo é por uso. No volume
-de uma demonstração, todos os serviços ficam dentro dos limites gratuitos.
+Nuvem pública (AWS), FaaS + serviços gerenciados: não tem servidor pra
+administrar, escala sozinho e o custo é por uso. No volume de uma demo, tudo
+fica dentro do free tier.
 
 ## Arquitetura
 
 ```
-config          → composition root (UseCaseConfig, AwsClientConfig, EnvironmentConfig)
-adapter.input   → lambda: handler (3 funções), dto, mapper (corpo HTTP / stream), response, exception
-adapter.output  → dynamodb (persistence, model, mapper), sns (notifier + formatter), time
-application     → domain (Feedback, WeeklyReport), port.input, port.output, usecase, exception
+config          -> composition root (UseCaseConfig, AwsClientConfig, EnvironmentConfig)
+adapter.input   -> lambda: handler (3 funcoes), dto, mapper (corpo HTTP / stream), response, exception
+adapter.output  -> dynamodb (persistence, model, mapper), sns (notifier + formatter), time
+application     -> domain (Feedback, WeeklyReport), port.input, port.output, usecase, exception
 ```
 
-Regras de dependência: domínio e use cases não dependem de AWS, Lambda nem
-Jackson (só recebem `port.output` por injeção); os handlers só conhecem
-`port.input`; anotações do DynamoDB só existem em `adapter.output.dynamodb.model`.
-
-Diagrama completo em [`docs/arquitetura.md`](docs/arquitetura.md).
+Domínio e use cases não dependem de AWS, Lambda nem Jackson (só recebem
+`port.output` por injeção); os handlers só conhecem `port.input`; anotação de
+DynamoDB fica isolada em `adapter.output.dynamodb.model`. Diagrama completo em
+[`docs/arquitetura.md`](docs/arquitetura.md).
 
 ```
-Aluno ─POST /avaliacao─► API Gateway ─► ReceiveFeedbackHandler ─► DynamoDB (Avaliacoes)
-                                                                      │ stream (INSERT + CRITICAL)
-                                                                      ▼
-                                                    NotifyUrgencyHandler ─► SNS ─► e-mail admin
-EventBridge Scheduler (seg 08:00) ─► WeeklyReportHandler ─► Query dia-index ─► SNS ─► e-mail admin
-CloudWatch (alarmes de erro / 5xx) ─────────────────────────────────────────► SNS ─► e-mail admin
+Aluno -POST /avaliacao-> API Gateway -> ReceiveFeedbackHandler -> DynamoDB (Avaliacoes)
+                                                                      | stream (INSERT + CRITICAL)
+                                                                      v
+                                                    NotifyUrgencyHandler -> SNS -> e-mail admin
+EventBridge Scheduler (seg 08:00) -> WeeklyReportHandler -> Query dia-index -> SNS -> e-mail admin
+CloudWatch (alarmes de erro / 5xx) ------------------------------------------> SNS -> e-mail admin
 ```
 
-### Decisões de projeto
+### Decisões
 
-- **Java puro, sem Spring.** Em Lambda, o container de injeção aumentaria o cold
-  start e o consumo de memória sem benefício para três handlers pequenos. O papel
-  do `UseCaseConfig` com `@Bean` dos serviços Spring é feito por um composition
-  root manual (`config/UseCaseConfig`), e cada função monta só os adapters que usa.
-- **Um único jar, três funções.** O `mvn package` gera `target/feedback.jar`; cada
-  função Lambda aponta para o seu handler. A separação de responsabilidades está
-  no código (handler + use case + porta por função) e na infraestrutura (role IAM,
-  gatilho e alarme por função).
-- **Notificação pelo stream do DynamoDB.** A função de recebimento só grava; quem
-  avisa o admin é outra função, acionada pelo stream com filtro no event source.
-  Assim o recebimento não depende do envio de e-mail, e uma falha no envio é
-  reprocessada pelo próprio Lambda.
-- **SNS em vez de SES.** O e-mail do admin é inscrito no tópico; não é preciso
-  verificar remetente nem sair do sandbox do SES.
-- **Sem coerção de tipos na API.** `"5"`, `5.5` ou `true` não são aceitos como nota.
+- **Sem Spring.** Em Lambda isso só aumentaria cold start e memória sem ganhar
+  nada pra três handlers pequenos. Quem faz esse papel é o `UseCaseConfig`
+  (composition root manual) — cada função monta só os adapters que usa.
+- **Um jar, três funções.** `mvn package` gera `target/feedback.jar` e cada
+  Lambda aponta pro seu handler. A separação fica no código (handler + use
+  case + porta por função) e na infra (role, gatilho e alarme por função).
+- **Notificação pelo stream.** Quem recebe a avaliação só grava; quem avisa o
+  admin é outra função acionada pelo stream do DynamoDB. Assim o recebimento
+  não trava esperando o e-mail, e se o envio falhar o próprio Lambda tenta de
+  novo.
+- **SNS, não SES.** O e-mail do admin é só inscrito no tópico — não precisa
+  verificar remetente nem sair do sandbox.
+- **Nota não aceita coerção de tipo.** `"5"`, `5.5` ou `true` são recusados.
 
 ## Funções
 
 ### 1. `receber-avaliacao` — `ReceiveFeedbackHandler`
-- **Gatilho:** API Gateway `POST /avaliacao` (header `x-api-key`).
-- **Entrada:** `{"descricao": "Aula confusa", "nota": 2}`
-  - `descricao`: texto não vazio, até 500 caracteres (também aceita `descrição`).
-  - `nota`: inteiro de 0 a 10.
-- **Saída:** `201 {"id", "urgencia", "dataEnvio"}`; erros no formato Problem
-  Details (`400 INVALID_FEEDBACK`, `500 INTERNAL_ERROR`).
-- **Permissões:** apenas `dynamodb:PutItem` na tabela.
+- Gatilho: API Gateway `POST /avaliacao` (header `x-api-key`).
+- Entrada: `{"descricao": "Aula confusa", "nota": 2}` — descrição não vazia até
+  500 caracteres (aceita `descrição` também), nota inteira de 0 a 10.
+- Saída: `201 {"id", "urgencia", "dataEnvio"}`; erro em formato Problem Details
+  (`400 INVALID_FEEDBACK`, `500 INTERNAL_ERROR`).
+- Permissão: só `dynamodb:PutItem` na tabela.
 
 ### 2. `notificar-urgencia` — `NotifyUrgencyHandler`
-- **Gatilho:** stream do DynamoDB, filtrado no event source (`INSERT` e `urgencia = CRITICAL`).
-- **Ação:** e-mail ao admin com **descrição, urgência e data de envio** (e também nota e id).
-- **Permissões:** leitura do stream (concedida pelo SAM) e `sns:Publish` no tópico do admin.
-- Não grava no banco. Se o envio falhar, o Lambda refaz a tentativa (até 2 vezes)
-  e o alarme de erros avisa o admin.
+- Gatilho: stream do DynamoDB, já filtrado no event source (`INSERT` +
+  `urgencia = CRITICAL`).
+- Ação: e-mail pro admin com descrição, urgência e data de envio (nota e id
+  também vão junto).
+- Permissão: leitura do stream (o SAM concede sozinho) + `sns:Publish`.
+- Não grava nada. Se falhar o envio, o Lambda tenta de novo (até 2x) e o
+  alarme de erro avisa o admin.
 
 ### 3. `gerar-relatorio` — `WeeklyReportHandler`
-- **Gatilho:** EventBridge Scheduler `cron(0 8 ? * MON *)`, fuso `America/Sao_Paulo`.
-- **Ação:** uma `Query` por dia no índice `dia-index` (7 dias, incluindo hoje) e
-  e-mail com a lista das avaliações (descrição, urgência, nota, data),
-  **média das notas**, **quantidade por dia** e **quantidade por urgência**.
-- **Permissões:** `dynamodb:Query` apenas no índice `dia-index` e `sns:Publish`.
-- Aceita `{"dias": N}` para testes manuais.
+- Gatilho: EventBridge Scheduler, `cron(0 8 ? * MON *)` em
+  `America/Sao_Paulo`.
+- Ação: uma `Query` por dia no índice `dia-index` (7 dias incluindo hoje) e
+  e-mail com a lista de avaliações, média das notas, quantidade por dia e
+  quantidade por urgência.
+- Permissão: `dynamodb:Query` só no índice `dia-index` + `sns:Publish`.
+- Aceita `{"dias": N}` pra testar manualmente.
 
 ### Regra de urgência
 
-O enunciado não define como calcular a urgência; a regra adotada fica em
-`Feedback#classify`:
+O enunciado não fala como calcular urgência, então a regra abaixo foi decisão
+nossa (`Feedback#classify`):
 
 | Nota   | Urgência |
 | ------ | -------- |
-| 0 a 3  | `CRITICAL` (CRÍTICA) |
-| 4 a 6  | `MEDIUM` (MÉDIA)     |
-| 7 a 10 | `LOW` (BAIXA)        |
+| 0 a 3  | CRITICAL (crítica) |
+| 4 a 6  | MEDIUM (média)     |
+| 7 a 10 | LOW (baixa)        |
 
 ## Segurança e governança de acesso
 
-- Usuário **root com MFA** e sem uso no dia a dia; operação com usuário IAM próprio.
-- **Menor privilégio:** cada função tem sua própria role, só com as ações que usa.
-- **API protegida por chave** (usage plan), com throttling (5 req/s, burst 10) e cota mensal.
-- **HTTPS** obrigatório no API Gateway e **criptografia em repouso** no DynamoDB.
-- **Sem segredos no repositório:** o e-mail do admin entra como parâmetro de deploy;
-  o pipeline usa **OIDC** (sem chaves de acesso fixas). A role de deploy só pode ser
+- Root com MFA e fora do uso diário; operação com usuário IAM próprio.
+- Menor privilégio: cada função tem a sua role, só com o que usa de fato.
+- API com chave (usage plan), throttling de 5 req/s (burst 10) e cota mensal.
+- HTTPS obrigatório no API Gateway, criptografia em repouso no DynamoDB.
+- Nada de segredo no repo: e-mail do admin entra via parâmetro de deploy, o
+  pipeline autentica por OIDC (sem chave fixa), e a role de deploy só pode ser
   assumida pelo ambiente `producao` deste repositório.
-- **LGPD / minimização:** a avaliação é anônima; nenhum dado pessoal do aluno é coletado.
-- Alerta de orçamento (AWS Budgets) e tag `projeto=techchallenge-fase4` em todos os recursos.
+- Avaliação é anônima — não guarda dado pessoal do aluno (LGPD).
+- Budget alert na conta e tag `projeto=techchallenge-fase4` em tudo.
 
 ## Monitoramento e alertas
 
-- **Logs** estruturados (formato JSON do Lambda) com retenção de 7 dias.
-- **Dashboard** `feedback-plataforma-monitoramento`: invocações, erros e duração por
-  função; requisições, 4xx e 5xx da API; estado dos alarmes.
-- **Alarmes** com e-mail ao admin: erros em cada função e 5xx na API.
+- Logs em JSON (formato padrão do Lambda), retenção de 7 dias.
+- Dashboard `feedback-plataforma-monitoramento`: invocação, erro e duração por
+  função, requisições/4xx/5xx da API, estado dos alarmes.
+- Alarme (-> e-mail do admin) em erro de qualquer função e em 5xx da API.
 
-## Configuração e execução
+## Rodando o projeto
 
 ### Pré-requisitos
 - Java 21 e Maven 3.9+
-- AWS CLI configurado (`aws sts get-caller-identity` deve responder)
+- AWS CLI configurado (`aws sts get-caller-identity` precisa responder)
 - AWS SAM CLI
 
 ### Build e testes
 ```bash
 mvn verify
 ```
-Executa os testes e aplica o gate do JaCoCo: **100% de cobertura de linha** sobre
-domínio, use cases, handlers e adapters. Ficam fora do gate apenas classes de
-boilerplate (DTOs, enums, item do DynamoDB e configuração de wiring) — ver
-exclusões no `pom.xml`. Relatório: `target/site/jacoco/index.html`.
+Roda os testes e o gate do JaCoCo (100% de cobertura de linha em domínio, use
+cases, handlers e adapters — fora disso só boilerplate, ver exclusões no
+`pom.xml`). Relatório em `target/site/jacoco/index.html`; o jar fica em
+`target/feedback.jar`.
 
-O jar das funções fica em `target/feedback.jar`.
-
-### Deploy
+### Deploy manual
 ```bash
 mvn package
 sam deploy --parameter-overrides AdminEmail=seu-email@exemplo.com
 ```
-Depois do primeiro deploy, abra o e-mail **"AWS Notification - Subscription
-Confirmation"** e clique em **Confirm subscription**; sem isso o SNS não entrega
-nenhuma mensagem.
+Depois do primeiro deploy, confirma a inscrição no e-mail "AWS Notification -
+Subscription Confirmation" — sem isso o SNS não entrega nada.
 
-### Deploy automatizado (GitHub Actions)
-1. Uma única vez, crie a role OIDC:
+### Deploy automático (GitHub Actions)
+1. Uma vez só, cria a role OIDC:
    ```bash
    aws cloudformation deploy --template-file infra/github-oidc.yaml --stack-name feedback-github-oidc \
      --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOrg=SEU_USUARIO GitHubRepo=svc-feedback-platform
    aws cloudformation describe-stacks --stack-name feedback-github-oidc --query "Stacks[0].Outputs"
    ```
-2. No GitHub: *Settings → Environments → New environment* com o nome **producao**.
-3. *Settings → Secrets and variables → Actions*: crie `AWS_ROLE_ARN` (saída acima) e `ADMIN_EMAIL`.
-4. Todo push na `main` roda `mvn verify`, o lint do template e o deploy.
+2. No GitHub: Settings -> Environments -> novo ambiente `producao`.
+3. Settings -> Secrets and variables -> Actions: cria `AWS_ROLE_ARN` (saída
+   acima) e `ADMIN_EMAIL`.
+4. Push na `main` roda `mvn verify`, lint do template e deploy.
 
-## Como testar
+## Testando
 
-Envio de avaliações (PowerShell; o script busca a URL e a chave de API sozinho):
+Enviar avaliação (PowerShell; o script busca URL e API key sozinho):
 ```powershell
-.\scripts\enviar-avaliacao.ps1 -Descricao "Aula confusa" -Nota 2     # CRÍTICA: chega e-mail
-.\scripts\enviar-avaliacao.ps1 -Descricao "Aula excelente" -Nota 9   # BAIXA
-.\scripts\enviar-avaliacao.ps1 -Descricao "Inválida" -Nota 11        # 400
+.\scripts\enviar-avaliacao.ps1 -Descricao "Aula confusa" -Nota 2     # critica, chega e-mail
+.\scripts\enviar-avaliacao.ps1 -Descricao "Aula excelente" -Nota 9   # baixa
+.\scripts\enviar-avaliacao.ps1 -Descricao "Invalida" -Nota 11        # 400
 ```
 
-Disparar o relatório sem esperar a segunda-feira:
+Disparar o relatório sem esperar segunda:
 ```bash
 aws lambda invoke --function-name feedback-plataforma-gerar-relatorio \
   --payload '{"dias": 7}' --cli-binary-format raw-in-base64-out saida.json
 ```
 
-Eventos de exemplo para `sam local invoke` estão em `events/`.
+Eventos de exemplo pro `sam local invoke` estão em `events/`.
 
 ## Custos
 
-Tudo é cobrado por uso e, no volume de uma demonstração, fica dentro dos limites
-gratuitos. Após gravar a demonstração, remova o ambiente:
+Tudo é cobrado por uso, no volume de uma demo fica dentro do free tier. Depois
+de gravar a demonstração, derruba o ambiente:
 ```bash
 sam delete
 ```

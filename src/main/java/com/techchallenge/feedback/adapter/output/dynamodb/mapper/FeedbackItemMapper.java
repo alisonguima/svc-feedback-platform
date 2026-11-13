@@ -7,10 +7,7 @@ import com.techchallenge.feedback.application.domain.enums.UrgencyEnum;
 import java.time.Instant;
 import java.time.LocalDate;
 
-/**
- * Mapeamento domínio <-> item do DynamoDB. Manual (sem MapStruct) porque todas as
- * conversões mudam de tipo: Instant/LocalDate/enum para String.
- */
+// sem mapstruct, nao compensa pra 2 metodos
 public final class FeedbackItemMapper {
 
   private FeedbackItemMapper() {}

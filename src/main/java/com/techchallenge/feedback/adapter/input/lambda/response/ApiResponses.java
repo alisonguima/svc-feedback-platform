@@ -7,7 +7,6 @@ import com.techchallenge.feedback.adapter.input.lambda.dto.ProblemResponse;
 import java.time.Instant;
 import java.util.Map;
 
-/** Monta as respostas HTTP devolvidas ao API Gateway. */
 public final class ApiResponses {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -25,7 +24,7 @@ public final class ApiResponses {
     return build(status, PROBLEM_JSON, new ProblemResponse(status, title, detail, Instant.now().toString()));
   }
 
-  /** valueToTree não lança exceção checada; o toString() do JsonNode gera JSON válido. */
+  // valueToTree em vez de writeValueAsString pra nao lidar com JsonProcessingException aqui
   private static APIGatewayProxyResponseEvent build(int status, Map<String, String> headers, Object body) {
     return new APIGatewayProxyResponseEvent()
         .withStatusCode(status)

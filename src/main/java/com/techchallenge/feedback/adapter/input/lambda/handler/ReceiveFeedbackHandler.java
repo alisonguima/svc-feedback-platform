@@ -13,16 +13,12 @@ import com.techchallenge.feedback.application.domain.Feedback;
 import com.techchallenge.feedback.application.port.input.ReceiveFeedbackPort;
 import com.techchallenge.feedback.config.UseCaseConfig;
 
-/**
- * Função 1 - receber-avaliacao. Gatilho: API Gateway {@code POST /avaliacao}.
- * Só conhece a porta de entrada {@link ReceiveFeedbackPort}.
- */
+// receber-avaliacao: POST /avaliacao
 public class ReceiveFeedbackHandler
     implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
   private final ReceiveFeedbackPort receiveFeedbackPort;
 
-  /** Construtor usado pelo runtime do Lambda (composition root em {@link UseCaseConfig}). */
   public ReceiveFeedbackHandler() {
     this(UseCaseConfig.receiveFeedbackPort());
   }

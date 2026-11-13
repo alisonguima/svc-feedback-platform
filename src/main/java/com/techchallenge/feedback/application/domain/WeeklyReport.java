@@ -17,10 +17,6 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
-/**
- * Consolidado das avaliações de um período: lista das avaliações, média das
- * notas, quantidade por dia e quantidade por urgência.
- */
 @Getter
 @AllArgsConstructor
 public class WeeklyReport {
@@ -33,7 +29,6 @@ public class WeeklyReport {
   private Map<LocalDate, Long> countByDay;
   private Map<UrgencyEnum, Long> countByUrgency;
 
-  /** Dias do período terminando em {@code endDay} (inclusive), em ordem crescente. */
   public static List<LocalDate> periodEndingAt(LocalDate endDay, int days) {
     if (days < 1) {
       throw new IllegalArgumentException("O período do relatório deve ter pelo menos 1 dia.");
@@ -62,7 +57,6 @@ public class WeeklyReport {
     return feedbacks.size();
   }
 
-  /** Média das notas com 2 casas decimais; vazio quando não há avaliações no período. */
   public Optional<BigDecimal> getAverageScore() {
     return Optional.of(feedbacks)
         .filter(list -> !list.isEmpty())

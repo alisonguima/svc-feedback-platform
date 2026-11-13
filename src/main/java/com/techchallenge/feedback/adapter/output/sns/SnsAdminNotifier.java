@@ -8,10 +8,6 @@ import com.techchallenge.feedback.application.port.output.AdminNotifierPort;
 import lombok.RequiredArgsConstructor;
 import software.amazon.awssdk.services.sns.SnsClient;
 
-/**
- * Entrega e-mails aos administradores publicando no tópico SNS que tem o e-mail
- * do admin inscrito (dispensa verificação de remetente do SES).
- */
 @RequiredArgsConstructor
 public class SnsAdminNotifier implements AdminNotifierPort {
 

@@ -6,7 +6,6 @@ import com.techchallenge.feedback.application.port.output.AdminNotifierPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/** Responsabilidade única: avisar os administradores sobre avaliações críticas. */
 @Slf4j
 @RequiredArgsConstructor
 public class NotifyUrgencyUseCase implements NotifyUrgencyPort {

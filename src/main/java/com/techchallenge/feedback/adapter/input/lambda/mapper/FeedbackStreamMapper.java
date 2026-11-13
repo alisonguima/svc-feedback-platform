@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
 
-/** Converte o NewImage do stream do DynamoDB (atributos tipados) no domínio. */
 public final class FeedbackStreamMapper {
 
   private FeedbackStreamMapper() {}

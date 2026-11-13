@@ -10,14 +10,8 @@ import com.techchallenge.feedback.application.usecase.GenerateWeeklyReportUseCas
 import com.techchallenge.feedback.application.usecase.NotifyUrgencyUseCase;
 import com.techchallenge.feedback.application.usecase.ReceiveFeedbackUseCase;
 
-/**
- * Composition root (papel do UseCaseConfig com @Bean nos serviços Spring).
- * Cada função monta apenas os adapters que usa: a receber-avaliacao não cria
- * cliente SNS e a notificar-urgencia não cria cliente DynamoDB.
- *
- * <p>Sem Spring de propósito: em Lambda, o container de injeção aumentaria o
- * cold start e a memória sem trazer benefício para três handlers pequenos.
- */
+// composition root manual (sem Spring - o container so ia aumentar cold start pra 3 handlers
+// pequenos). cada funcao monta so os adapters que usa.
 public final class UseCaseConfig {
 
   private UseCaseConfig() {}

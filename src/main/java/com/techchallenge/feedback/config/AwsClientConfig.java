@@ -8,10 +8,7 @@ import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.sns.SnsClient;
 
-/**
- * Clientes da AWS. Região e credenciais vêm do ambiente do Lambda; o cliente HTTP
- * baseado em URLConnection reduz o tamanho do pacote e o cold start.
- */
+// UrlConnectionHttpClient em vez do Apache/Netty - pacote menor, cold start melhor
 public final class AwsClientConfig {
 
   private AwsClientConfig() {}

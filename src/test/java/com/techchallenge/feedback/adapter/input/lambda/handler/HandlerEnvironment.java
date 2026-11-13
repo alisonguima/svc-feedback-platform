@@ -1,6 +1,5 @@
 package com.techchallenge.feedback.adapter.input.lambda.handler;
 
-/** Valores mínimos para os construtores padrão montarem os clientes da AWS (sem chamadas de rede). */
 final class HandlerEnvironment {
 
   private HandlerEnvironment() {}

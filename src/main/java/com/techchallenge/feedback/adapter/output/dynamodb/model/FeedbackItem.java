@@ -9,10 +9,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbParti
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondaryPartitionKey;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSecondarySortKey;
 
-/**
- * Item da tabela {@code Avaliacoes}. Os nomes dos atributos seguem o contrato da
- * API (português) e são usados pelo filtro do stream e pelo índice dia-index.
- */
+// nomes dos atributos em portugues - o filtro do stream no template.yaml depende deles
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor

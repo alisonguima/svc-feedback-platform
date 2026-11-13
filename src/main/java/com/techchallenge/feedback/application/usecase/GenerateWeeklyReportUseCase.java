@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Responsabilidade única: consolidar as avaliações do período e enviar o relatório. */
 @Slf4j
 @RequiredArgsConstructor
 public class GenerateWeeklyReportUseCase implements GenerateWeeklyReportPort {

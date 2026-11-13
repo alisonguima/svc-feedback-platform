@@ -11,11 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * Função 2 - notificar-urgencia. Gatilho: stream do DynamoDB, já filtrado no
- * event source (INSERT + urgência CRITICAL). Se o envio falhar, a exceção sobe:
- * o Lambda refaz a tentativa e o alarme de erros avisa o administrador.
- */
+// notificar-urgencia: stream do DynamoDB ja filtrado (INSERT + CRITICAL). falhou, sobe a excecao
+// e deixa o proprio Lambda reprocessar.
 @Slf4j
 public class NotifyUrgencyHandler implements RequestHandler<DynamodbEvent, Map<String, Object>> {
 

@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** Monta o texto dos e-mails enviados aos administradores. */
 public final class AdminMessageFormatter {
 
   static final int MAX_FEEDBACKS_IN_REPORT = 200;
@@ -22,7 +21,6 @@ public final class AdminMessageFormatter {
 
   private AdminMessageFormatter() {}
 
-  /** Dados exigidos no aviso de urgência: descrição, urgência e data de envio. */
   public static AdminMessage urgency(Feedback feedback) {
     String subject = "[URGENTE] Feedback critico recebido - nota %d".formatted(feedback.getScore());
     String body = String.join("\n",
@@ -36,10 +34,6 @@ public final class AdminMessageFormatter {
     return new AdminMessage(subject, body);
   }
 
-  /**
-   * Dados exigidos no relatório: descrição, urgência e data de envio de cada
-   * avaliação, quantidade por dia, quantidade por urgência e média das notas.
-   */
   public static AdminMessage weeklyReport(WeeklyReport report) {
     String period = "%s a %s".formatted(DAY.format(report.getStartDay()), DAY.format(report.getEndDay()));
     String subject = "Relatorio semanal de feedbacks - " + period;

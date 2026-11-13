@@ -5,7 +5,6 @@ import com.techchallenge.feedback.adapter.input.lambda.response.ApiResponses;
 import com.techchallenge.feedback.application.exception.InvalidFeedbackException;
 import lombok.extern.slf4j.Slf4j;
 
-/** Equivalente ao GlobalExceptionHandler dos serviços Spring, para a função HTTP. */
 @Slf4j
 public final class LambdaExceptionHandler {
 

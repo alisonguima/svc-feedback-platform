@@ -9,6 +9,6 @@ public interface FeedbackPersistencePort {
 
   Feedback save(Feedback feedback);
 
-  /** Avaliações enviadas no dia informado (fuso de Brasília). */
+  // dia calculado no fuso de Brasilia
   List<Feedback> findBySentDay(LocalDate day);
 }

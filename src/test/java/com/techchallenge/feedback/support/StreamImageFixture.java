@@ -8,7 +8,6 @@ public final class StreamImageFixture {
 
   private StreamImageFixture() {}
 
-  /** NewImage de uma avaliação crítica, como chega no stream do DynamoDB. */
   public static Map<String, AttributeValue> criticalImage() {
     return Map.of(
         "id", new AttributeValue().withS("abc-123"),

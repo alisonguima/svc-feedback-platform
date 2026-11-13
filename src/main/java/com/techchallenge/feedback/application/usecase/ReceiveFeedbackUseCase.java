@@ -7,10 +7,7 @@ import com.techchallenge.feedback.application.port.output.FeedbackPersistencePor
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Responsabilidade única: registrar a avaliação. Não envia e-mail — o aviso de
- * urgência é feito por outra função, acionada pelo stream da tabela.
- */
+// so grava a avaliacao; o aviso de urgencia fica por conta da notificar-urgencia (stream)
 @Slf4j
 @RequiredArgsConstructor
 public class ReceiveFeedbackUseCase implements ReceiveFeedbackPort {

@@ -10,15 +10,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.UUID;
 
-/**
- * Avaliação de uma aula enviada por um estudante. A avaliação é anônima: não
- * guardamos nenhum dado pessoal do aluno (minimização de dados / LGPD).
- */
 @Getter
 @AllArgsConstructor
 public class Feedback {
 
-  /** Fuso usado para agrupar avaliações por dia no relatório. */
   public static final ZoneId BRAZIL_ZONE = ZoneId.of("America/Sao_Paulo");
 
   public static final int MIN_SCORE = 0;
@@ -35,10 +30,6 @@ public class Feedback {
   private Instant sentAt;
   private LocalDate sentDay;
 
-  /**
-   * Cria uma nova avaliação válida. {@code now} vem do relógio da aplicação
-   * (DateTimeProviderPort); o dia de envio é calculado no fuso de Brasília.
-   */
   public static Feedback create(String description, Integer score, Instant now) {
     String validDescription = validateDescription(description);
     int validScore = validateScore(score);
@@ -52,10 +43,7 @@ public class Feedback {
         LocalDate.ofInstant(now, BRAZIL_ZONE));
   }
 
-  /**
-   * Regra de urgência (definida pela equipe, o enunciado não especifica):
-   * 0 a 3 = CRÍTICA, 4 a 6 = MÉDIA, 7 a 10 = BAIXA.
-   */
+  // 0-3 critica, 4-6 media, 7-10 baixa (o enunciado nao definia a regra, essa foi a nossa)
   public static UrgencyEnum classify(int score) {
     if (score <= CRITICAL_MAX_SCORE) {
       return UrgencyEnum.CRITICAL;

@@ -8,11 +8,7 @@ import com.techchallenge.feedback.application.exception.InvalidFeedbackException
 
 import java.util.Optional;
 
-/**
- * Converte o corpo HTTP em {@link FeedbackRequest} sem coerção de tipos: "5",
- * 5.5 ou true NÃO viram nota. Campos com tipo errado chegam como {@code null} e
- * são recusados pelas regras do domínio.
- */
+// sem coercao de tipo: "5", 5.5 ou true nao viram nota, o campo chega null e o dominio rejeita
 public final class FeedbackRequestParser {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();

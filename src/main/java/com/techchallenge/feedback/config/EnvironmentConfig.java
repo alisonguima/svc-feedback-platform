@@ -2,7 +2,7 @@ package com.techchallenge.feedback.config;
 
 import java.util.Optional;
 
-/** Lê configuração das variáveis de ambiente do Lambda (com fallback para system properties nos testes). */
+// fallback pra system property por causa dos testes (nao da pra exportar env var no surefire facil)
 public final class EnvironmentConfig {
 
   public static final String TABLE_NAME = "TABLE_NAME";

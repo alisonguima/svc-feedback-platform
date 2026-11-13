@@ -22,7 +22,6 @@ public class FeedbackDynamoDb implements FeedbackPersistencePort {
     return feedback;
   }
 
-  /** Query no índice dia-index; a paginação é tratada pelo SDK ao percorrer as páginas. */
   @Override
   public List<Feedback> findBySentDay(LocalDate day) {
     return table.index(FeedbackItem.DAY_INDEX)

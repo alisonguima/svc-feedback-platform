@@ -10,10 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Função 3 - gerar-relatorio. Gatilho: EventBridge Scheduler (segunda, 08:00 em
- * Brasília). Aceita {@code {"dias": N}} para testes manuais (padrão: 7).
- */
+// gerar-relatorio: scheduler (seg 08h). aceita {"dias": N} pra testar na mao
 public class WeeklyReportHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 
   private static final String DAYS_FIELD = "dias";
