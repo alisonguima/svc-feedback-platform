@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Executar UMA VEZ (manualmente). Cria o usuario IAM usado pelo GitHub Actions
+  para implantar a stack. A conta esta no plano Free da AWS, cujas politicas
+  gerenciadas (SCP) bloqueiam provedores de identidade (iam:*Provider*), entao
+  nao e possivel usar OIDC. A chave de acesso e criada depois, pela CLI, para
+  nao aparecer nas saidas da stack.
+
+Parameters:
+  StackName:
+    Type: String
+    Default: feedback-plataforma
+    Description: Nome da stack SAM que o pipeline vai gerenciar (samconfig.toml).
+
+Resources:
+  DeployPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub "${StackName}-github-deploy"
+      Description: Permissoes minimas para o pipeline implantar a stack SAM.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ServicosDaAplicacao
+            Effect: Allow
+            Action:
+              - cloudformation:*
+              - lambda:*
+              - apigateway:*
+              - dynamodb:*
+              - sns:*
+              - scheduler:*
+              - logs:*
+              - cloudwatch:*
+              - s3:*
+            Resource: "*"
+          - Sid: RolesDasFuncoes
+            Effect: Allow
+            Action:
+              - iam:CreateRole
+              - iam:DeleteRole
+              - iam:GetRole
+              - iam:PassRole
+              - iam:TagRole
+              - iam:UntagRole
+              - iam:AttachRolePolicy
+              - iam:DetachRolePolicy
+              - iam:PutRolePolicy
+              - iam:DeleteRolePolicy
+              - iam:GetRolePolicy
+              - iam:ListRolePolicies
+              - iam:ListAttachedRolePolicies
+              - iam:UpdateAssumeRolePolicy
+            # Roles criadas pelo CloudFormation recebem o nome da stack como prefixo.
+            Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackName}-*"
+
+  GitHubDeployUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Sub "${StackName}-github-deploy"
+      ManagedPolicyArns:
+        - !Ref DeployPolicy
+      Tags:
+        - Key: projeto
+          Value: techchallenge-fase4
+
+Outputs:
+  UserName:
+    Description: Usuario do pipeline. Crie a chave com "aws iam create-access-key --user-name <este valor>".
+    Value: !Ref GitHubDeployUser

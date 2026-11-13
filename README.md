@@ -23,7 +23,7 @@ projetos anteriores da fase.
 | Observabilidade | CloudWatch (logs JSON, dashboard, alarmes)              |
 | AWS SDK         | AWS SDK for Java v2                                     |
 | IaC             | AWS SAM (`template.yaml`)                               |
-| CI/CD           | GitHub Actions + OIDC                                   |
+| CI/CD           | GitHub Actions (usuário IAM dedicado ao deploy)         |
 | Testes          | JUnit 5, Mockito, AssertJ, JaCoCo (gate 100% linha)     |
 
 ## Modelo de cloud
@@ -116,9 +116,16 @@ nossa (`Feedback#classify`):
 - Menor privilégio: cada função tem a sua role, só com o que usa de fato.
 - API com chave (usage plan), throttling de 5 req/s (burst 10) e cota mensal.
 - HTTPS obrigatório no API Gateway, criptografia em repouso no DynamoDB.
-- Nada de segredo no repo: e-mail do admin entra via parâmetro de deploy, o
-  pipeline autentica por OIDC (sem chave fixa), e a role de deploy só pode ser
-  assumida pelo ambiente `producao` deste repositório.
+- Nada de segredo no repo: e-mail do admin entra via parâmetro de deploy e a
+  chave do pipeline fica nos secrets do GitHub.
+- Deploy automático com usuário IAM próprio (`feedback-plataforma-github-deploy`),
+  com permissão só para os serviços da stack e para as roles com prefixo
+  `feedback-plataforma-*`. O ideal seria OIDC (credencial temporária, sem chave
+  fixa), mas a conta está no plano Free da AWS, cujas políticas gerenciadas (SCP)
+  bloqueiam a criação de provedores de identidade (`iam:*Provider*`). Para
+  compensar: usuário exclusivo do pipeline, sem acesso ao console, e chave
+  removida ao fim do projeto.
+- Região única `us-east-2` (Ohio): a conta Free só libera a região do projeto.
 - Avaliação é anônima — não guarda dado pessoal do aluno (LGPD).
 - Budget alert na conta e tag `projeto=techchallenge-fase4` em tudo.
 
@@ -154,15 +161,16 @@ Depois do primeiro deploy, confirma a inscrição no e-mail "AWS Notification -
 Subscription Confirmation" — sem isso o SNS não entrega nada.
 
 ### Deploy automático (GitHub Actions)
-1. Uma vez só, cria a role OIDC:
+1. Uma vez só, cria o usuário de deploy e a chave dele:
    ```bash
-   aws cloudformation deploy --template-file infra/github-oidc.yaml --stack-name feedback-github-oidc \
-     --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOrg=alisonguima GitHubRepo=svc-feedback-platform
-   aws cloudformation describe-stacks --stack-name feedback-github-oidc --query "Stacks[0].Outputs"
+   aws cloudformation deploy --template-file infra/github-deploy-user.yaml \
+     --stack-name feedback-github-deploy --capabilities CAPABILITY_NAMED_IAM
+   aws iam create-access-key --user-name feedback-plataforma-github-deploy
    ```
+   A secret da chave só aparece nessa hora: copia direto para o GitHub, sem salvar em arquivo.
 2. No GitHub: Settings -> Environments -> novo ambiente `producao`.
-3. Settings -> Secrets and variables -> Actions: cria `AWS_ROLE_ARN` (saída
-   acima) e `ADMIN_EMAIL`.
+3. Settings -> Secrets and variables -> Actions: cria `AWS_ACCESS_KEY_ID`,
+   `AWS_SECRET_ACCESS_KEY` e `ADMIN_EMAIL`.
 4. Push na `main` roda `mvn verify`, lint do template e deploy.
 
 ## Testando
@@ -185,7 +193,11 @@ Eventos de exemplo pro `sam local invoke` estão em `events/`.
 ## Custos
 
 Tudo é cobrado por uso, no volume de uma demo fica dentro do free tier. Depois
-de gravar a demonstração, derruba o ambiente:
+de gravar a demonstração, derruba o ambiente e o usuário de deploy (a chave
+precisa ser apagada antes, senão o CloudFormation não remove o usuário):
 ```bash
 sam delete
+aws iam list-access-keys --user-name feedback-plataforma-github-deploy
+aws iam delete-access-key --user-name feedback-plataforma-github-deploy --access-key-id <AccessKeyId>
+aws cloudformation delete-stack --stack-name feedback-github-deploy
 ```
