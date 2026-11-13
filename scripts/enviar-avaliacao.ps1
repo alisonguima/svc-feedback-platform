@@ -10,7 +10,7 @@ param(
   [Parameter(Mandatory = $true)][string]$Descricao,
   [Parameter(Mandatory = $true)][int]$Nota,
   [string]$Stack = "feedback-plataforma",
-  [string]$Region = "us-east-1"
+  [string]$Region = "us-east-2"
 )
 
 $ErrorActionPreference = "Stop"

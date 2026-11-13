@@ -4,7 +4,7 @@ version = 0.1
 stack_name = "feedback-plataforma"
 
 [default.deploy.parameters]
-region = "us-east-1"
+region = "us-east-2"
 capabilities = "CAPABILITY_IAM"
 confirm_changeset = false
 resolve_s3 = true
@@ -15,5 +15,5 @@ fail_on_empty_changeset = false
 tags = "projeto=\"techchallenge-fase4\""
 
 [default.delete.parameters]
-region = "us-east-1"
+region = "us-east-2"
 no_prompts = true
