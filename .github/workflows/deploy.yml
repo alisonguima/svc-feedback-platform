@@ -1,0 +1,61 @@
+name: Testar e implantar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # necessario para autenticar na AWS via OIDC (sem chaves fixas)
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: "21"
+          cache: maven
+      - name: Testes + gate de cobertura (JaCoCo 100% linha) + jar
+        run: mvn -B verify
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lint do template (cfn-lint)
+        run: pip install cfn-lint && cfn-lint template.yaml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feedback-jar
+          path: target/feedback.jar
+
+  implantar:
+    needs: testar
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: producao
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: feedback-jar
+          path: target
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - name: Autenticar na AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy
+        run: |
+          sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
+            --parameter-overrides AdminEmail="${{ secrets.ADMIN_EMAIL }}"

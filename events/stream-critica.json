@@ -1,0 +1,17 @@
+{
+  "Records": [
+    {
+      "eventName": "INSERT",
+      "dynamodb": {
+        "NewImage": {
+          "id": { "S": "11111111-2222-3333-4444-555555555555" },
+          "descricao": { "S": "Aula confusa" },
+          "nota": { "N": "2" },
+          "urgencia": { "S": "CRITICAL" },
+          "dataEnvio": { "S": "2026-11-09T15:30:00Z" },
+          "dia": { "S": "2026-11-09" }
+        }
+      }
+    }
+  ]
+}

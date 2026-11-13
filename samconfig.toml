@@ -1,0 +1,19 @@
+version = 0.1
+
+[default.global.parameters]
+stack_name = "feedback-plataforma"
+
+[default.deploy.parameters]
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = false
+resolve_s3 = true
+fail_on_empty_changeset = false
+# O artefato e o jar gerado pelo Maven (mvn package); nao e preciso "sam build".
+# O e-mail do admin NAO fica no repositorio. Passe na linha de comando:
+#   sam deploy --parameter-overrides AdminEmail=voce@exemplo.com
+tags = "projeto=\"techchallenge-fase4\""
+
+[default.delete.parameters]
+region = "us-east-1"
+no_prompts = true

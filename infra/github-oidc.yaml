@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Executar UMA VEZ (manualmente). Cria a relacao de confianca GitHub <-> AWS (OIDC)
+  e a role que o GitHub Actions assume para implantar. Assim o pipeline nao usa
+  chaves de acesso fixas.
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: Usuario ou organizacao dona do repositorio no GitHub.
+  GitHubRepo:
+    Type: String
+    Description: Nome do repositorio.
+  StackName:
+    Type: String
+    Default: feedback-plataforma
+    Description: Nome da stack SAM que o pipeline vai gerenciar (samconfig.toml).
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList: [sts.amazonaws.com]
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${StackName}-github-deploy"
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                # So o ambiente "producao" do repositorio informado pode assumir esta role.
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepo}:environment:producao"
+      Policies:
+        - PolicyName: deploy-sam
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ServicosDaAplicacao
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - lambda:*
+                  - apigateway:*
+                  - dynamodb:*
+                  - sns:*
+                  - events:*
+                  - scheduler:*
+                  - logs:*
+                  - cloudwatch:*
+                  - s3:*
+                Resource: "*"
+              - Sid: RolesDasFuncoes
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:UpdateAssumeRolePolicy
+                Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${StackName}-*"
+
+Outputs:
+  RoleArn:
+    Description: Salve este valor no segredo AWS_ROLE_ARN do GitHub.
+    Value: !GetAtt GitHubDeployRole.Arn

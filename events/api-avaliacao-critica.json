@@ -1,0 +1,6 @@
+{
+  "httpMethod": "POST",
+  "path": "/avaliacao",
+  "headers": { "Content-Type": "application/json" },
+  "body": "{\"descricao\": \"Aula confusa\", \"nota\": 2}"
+}
