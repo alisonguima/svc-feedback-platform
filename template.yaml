@@ -144,7 +144,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub "${AWS::StackName}-notificar-urgencia"
-      Description: Envia e-mail ao admin quando uma avaliacao critica e gravada.
+      Description: Envia e-mail ao admin quando uma avaliacao CRITICA e gravada.
       Handler: com.techchallenge.feedback.adapter.input.lambda.handler.NotifyUrgencyHandler::handleRequest
       LoggingConfig:
         LogFormat: JSON
