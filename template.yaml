@@ -10,7 +10,7 @@ Parameters:
     Type: String
     Description: E-mail do administrador (recebe urgencias, relatorios e alarmes). Exige confirmar a inscricao do SNS.
     AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
-    ConstraintDescription: Informe um e-mail valido.
+    ConstraintDescription: Informe um email valido.
   RetencaoLogsDias:
     Type: Number
     Default: 7
