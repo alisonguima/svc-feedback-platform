@@ -7,7 +7,7 @@ sozinho. Tudo na AWS, serverless (Lambda + API Gateway + DynamoDB + SNS +
 EventBridge Scheduler + CloudWatch), seguindo arquitetura hexagonal igual os
 projetos anteriores da fase.
 
-> **Vídeo de demonstração:** _(link)_
+> **Vídeo de demonstração:** [youtu.be/P0fOuczyy4g](https://youtu.be/P0fOuczyy4g)
 > **Autor:** Alison Guimarães (RM371602)
 
 ## Stack
